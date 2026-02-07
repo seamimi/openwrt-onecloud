@@ -135,16 +135,38 @@ jobs:
             
     - name: patch修补
       run: |
-        [ -e patch ] && cp -rf patch/apk-tools/*.patch openwrt/package/system/apk/patches
-        curl -s https://raw.githubusercontent.com/immortalwrt/immortalwrt/master/config/Config-kernel.in > openwrt/config/Config-kernel.in
-        sed -i 's#https://git\.openwrt\.org/feed#https://github.com/openwrt#g; s#https://git\.openwrt\.org/project#https://github.com/openwrt#g' openwrt/feeds.conf.default
+    # 处理 apk-tools 补丁
+        if ls patch/apk-tools/*.patch 1>/dev/null 2>&1; then
+          mkdir -p openwrt/package/system
+          cp -rf patch/apk-tools/*.patch openwrt/package/system/
+        else
+          echo "No .patch files found in patch/apk-tools/, skipping..."
+        fi
+
+        curl -s https://raw.githubusercontent.com/immortalwrt/immortalwrt > feeds.conf.default
+        sed -i 's#https://git.openwrt.org/feed#https://github.com/openwrt#g' feeds.conf.default
         cd openwrt
         find ./staging_dir/ -name '*' -exec touch {} \; >/dev/null 2>&1
         ./scripts/feeds update -a
-        cd .. 
-        [ -e patch ] && cp -rf patch/firewall4/*.patch openwrt 
-        [ -e patch ] && cp -rf patch/luci/*.patch openwrt/feeds/luci
-        
+        cd ..
+
+    # 处理 firewall4 补丁
+        if ls patch/firewall4/*.patch 1>/dev/null 2>&1; then
+          cp -rf patch/firewall4/*.patch openwrt/
+        else
+          echo "No .patch files found in patch/firewall4/, skipping..."
+        fi
+
+    # 处理 luci 补丁
+        if ls patch/luci/*.patch 1>/dev/null 2>&1; then
+          mkdir -p openwrt/feeds/luci
+          cp -rf patch/luci/*.patch openwrt/feeds/luci/
+        else
+          echo "No .patch files found in patch/luci/, skipping..."
+        fi
+
+
+
     - name: 加载自定义脚本
       run: |
         chmod +x $DIY_P1_SH
@@ -249,3 +271,6 @@ jobs:
         delete_tags: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     
+
+
+        
