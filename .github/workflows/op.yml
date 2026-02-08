@@ -1,7 +1,7 @@
 name: openwrt
+# 优化触发条件：支持手动触发、定时触发、代码推送触发
 on:
-  repository_dispatch:
-  workflow_dispatch:
+  workflow_dispatch:  # 手动触发（必选，确保你能手动启动工作流）
     inputs:
       ENABLE_DHCP:
         description: '是否开启DHCP'     
@@ -28,8 +28,14 @@ on:
         required: false
         default: 'luci-app-dockerman luci-theme-aurora luci-app-ttyd luci-app-diskman luci-app-hd-idle luci-app-momo luci-app-samba4 luci-app-emby luci-app-openlist2'
         type: string
+  push:  # 代码推送时自动触发
+    branches: [main]  # 仅在main分支推送时触发
+  schedule:  # 定时触发（可选，比如每天凌晨1点）
+    - cron: '0 1 * * *'
+
 env:
   DIY_P1_SH: sh/op.sh
+
 jobs:
   build_firmware:
     name: 编译固件 - ${{ matrix.device }} - ${{ matrix.source }}
