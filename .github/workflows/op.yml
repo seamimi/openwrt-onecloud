@@ -1,43 +1,35 @@
 name: openwrt
-
 on:
   repository_dispatch:
   workflow_dispatch:
-
     inputs:
       ENABLE_DHCP:
         description: '是否开启DHCP'     
         required: false
         default: 'false'
         type: boolean 
-
       OP_IP:
         description: '静态IP地址'     
         required: false
         default: '192.168.2.2' 
         type: string
-
       OP_rootfs:
         description: '预设镜像大小'     
         required: false
         default: '600' 
         type: string
-
       OP_author:
         description: '定制作者'     
         required: false
         default: 'shiyu1314' 
         type: string    
-
       CUSTOM_PLUGINS:
         description: '自定义插件名称，用空格分隔'
         required: false
         default: 'luci-app-dockerman luci-theme-aurora luci-app-ttyd luci-app-diskman luci-app-hd-idle luci-app-momo luci-app-samba4 luci-app-emby luci-app-openlist2'
         type: string
-
 env:
   DIY_P1_SH: sh/op.sh
-
 jobs:
   build_firmware:
     name: 编译固件 - ${{ matrix.device }} - ${{ matrix.source }}
@@ -49,12 +41,9 @@ jobs:
         include:
           - device: "玩客云-ws1608"
             config: "CONFIG_TARGET_amlogic_meson8b_DEVICE_thunder-onecloud=y"
-
-
     steps: 
     - name: 检查分支
       uses: actions/checkout@v4
-
     - name: 释放磁盘空间
       run: |
         sudo rm -rf /etc/apt/sources.list.d
@@ -70,7 +59,6 @@ jobs:
         sudo sed -i '/NVM_DIR/d;/skel/d' /root/{.bashrc,.profile}
         rm -rf ~/{.cargo,.dotnet,.rustup}
         df -Th
-
     - name: 编译环境
       env:
         DEBIAN_FRONTEND: noninteractive
@@ -83,7 +71,6 @@ jobs:
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
         df -Th
-
     - name: 设置环境变量
       run: |
         TAG="$(date +'%Y%m%d')-$(openssl rand -hex 3)"
@@ -95,14 +82,12 @@ jobs:
         echo "OP_rootfs=${{ github.event.inputs.OP_rootfs }}" >> $GITHUB_ENV
         echo "CUSTOM_PLUGINS=${{ github.event.inputs.CUSTOM_PLUGINS }}" >> $GITHUB_ENV
         echo "ENABLE_DHCP=${{ github.event.inputs.ENABLE_DHCP }}" >> $GITHUB_ENV
-
     - name: 克隆源代码
       working-directory: /workdir
       run: |
         df -hT $PWD
         git clone $REPO_URL openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
-        
     - name: 切换分支
       working-directory: ./openwrt
       id: var
@@ -123,7 +108,6 @@ jobs:
             ;;
         esac
         echo "release_tag=$_release_tag" >> $GITHUB_ENV
-        
     - name: 取回缓存 staging_dir
       uses: actions/cache@v4
       with:
@@ -132,67 +116,56 @@ jobs:
         key: ${{ env.REPO_BRANCH }}-toolchain-cache
         restore-keys: |
           ${{ env.REPO_BRANCH }}-toolchain-cache 
-            
-  - name: Apply patches
-  run: |
-    # 处理 apk-tools 补丁
-    if [ -d patch/apk-tools ]; then
-      if ls patch/apk-tools/*.patch 1>/dev/null 2>&1; then
-        mkdir -p openwrt/package/system
-        cp -rf patch/apk-tools/*.patch openwrt/package/system/
-      else
-        echo "No .patch files found in patch/apk-tools/, skipping..."
-      fi
-    else
-      echo "Directory patch/apk-tools/ does not exist, skipping..."
-    fi
-
-    # 下载并修改 feeds 配置
-    curl -s https://raw.githubusercontent.com/immortalwrt/immortalwrt/openwrt-21.02/feeds.conf.default > feeds.conf.default
-    sed -i 's#https://git.openwrt.org/feed#https://github.com/openwrt#g' feeds.conf.default
-
-    # 更新 feeds
-    cd openwrt
-    find ./staging_dir/ -name '*' -exec touch {} \; >/dev/null 2>&1
-    ./scripts/feeds update -a
-    cd ..
-
-    # 处理 firewall4 补丁
-    if [ -d patch/firewall4 ]; then
-      if ls patch/firewall4/*.patch 1>/dev/null 2>&1; then
-        cp -rf patch/firewall4/*.patch openwrt/
-      else
-        echo "No .patch files found in patch/firewall4/, skipping..."
-      fi
-    else
-      echo "Directory patch/firewall4/ does not exist, skipping..."
-    fi
-
-    # 处理 luci 补丁
-    if [ -d patch/luci ]; then
-      if ls patch/luci/*.patch 1>/dev/null 2>&1; then
-        mkdir -p openwrt/feeds/luci
-        cp -rf patch/luci/*.patch openwrt/feeds/luci/
-      else
-        echo "No .patch files found in patch/luci/, skipping..."
-      fi
-    else
-      echo "Directory patch/luci/ does not exist, skipping..."
-    fi
-
-
-
+    - name: Apply patches
+      run: |
+        # 处理 apk-tools 补丁
+        if [ -d patch/apk-tools ]; then
+          if ls patch/apk-tools/*.patch 1>/dev/null 2>&1; then
+            mkdir -p openwrt/package/system
+            cp -rf patch/apk-tools/*.patch openwrt/package/system/
+          else
+            echo "No .patch files found in patch/apk-tools/, skipping..."
+          fi
+        else
+          echo "Directory patch/apk-tools/ does not exist, skipping..."
+        fi
+        # 下载并修改 feeds 配置
+        curl -s https://raw.githubusercontent.com/immortalwrt/immortalwrt/openwrt-21.02/feeds.conf.default > feeds.conf.default
+        sed -i 's#https://git.openwrt.org/feed#https://github.com/openwrt#g' feeds.conf.default
+        # 更新 feeds
+        cd openwrt
+        find ./staging_dir/ -name '*' -exec touch {} \; >/dev/null 2>&1
+        ./scripts/feeds update -a
+        cd ..
+        # 处理 firewall4 补丁
+        if [ -d patch/firewall4 ]; then
+          if ls patch/firewall4/*.patch 1>/dev/null 2>&1; then
+            cp -rf patch/firewall4/*.patch openwrt/
+          else
+            echo "No .patch files found in patch/firewall4/, skipping..."
+          fi
+        else
+          echo "Directory patch/firewall4/ does not exist, skipping..."
+        fi
+        # 处理 luci 补丁
+        if [ -d patch/luci ]; then
+          if ls patch/luci/*.patch 1>/dev/null 2>&1; then
+            mkdir -p openwrt/feeds/luci
+            cp -rf patch/luci/*.patch openwrt/feeds/luci/
+          else
+            echo "No .patch files found in patch/luci/, skipping..."
+          fi
+        else
+          echo "Directory patch/luci/ does not exist, skipping..."
+        fi
     - name: 加载自定义脚本
       run: |
         chmod +x $DIY_P1_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P1_SH
-
-        
     - name: 添加玩客云
       run: |
         git clone https://shiyu1314:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/shiyu1314/s805 -b 6.12 openwrt/target/linux/amlogic
-         
     - name: 加载自定义配置
       run: |
         [ -e files ] && mv files openwrt/files
@@ -217,7 +190,6 @@ jobs:
         for plugin in "${plugins[@]}"; do
           echo "CONFIG_PACKAGE_${plugin}=y" >> openwrt/.config
         done    
-    
     - name: 下载编译依赖
       id: package
       run: |
@@ -226,7 +198,6 @@ jobs:
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
-    
     - name: 编译源码
       id: compile
       run: |
@@ -237,11 +208,9 @@ jobs:
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
-
     - name: 查看磁盘使用情况
       if: (!cancelled())
       run: df -hT
-
     - name: 整理文件
       id: organize
       run: |
@@ -260,7 +229,6 @@ jobs:
         rm -rf *.sha
         rm -rf sha256sums
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-
     - name: 上传固件到Releases
       uses: softprops/action-gh-release@v2.1.0
       env:
@@ -278,14 +246,10 @@ jobs:
            定制作者：${{ github.event.inputs.OP_author }}
            扩容：sh 1.sh
            默认密码：无
-
     - name: 清理Releases
       uses: dev-drprasad/delete-older-releases@v0.3.4
       with:
         keep_latest: 1
         delete_tags: true
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     
-
-
-        
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
