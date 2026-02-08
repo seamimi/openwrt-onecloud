@@ -133,37 +133,52 @@ jobs:
         restore-keys: |
           ${{ env.REPO_BRANCH }}-toolchain-cache 
             
-    - name: patch修补
-      run: |
+  - name: Apply patches
+  run: |
     # 处理 apk-tools 补丁
-        if ls patch/apk-tools/*.patch 1>/dev/null 2>&1; then
-          mkdir -p openwrt/package/system
-          cp -rf patch/apk-tools/*.patch openwrt/package/system/
-        else
-          echo "No .patch files found in patch/apk-tools/, skipping..."
-        fi
+    if [ -d patch/apk-tools ]; then
+      if ls patch/apk-tools/*.patch 1>/dev/null 2>&1; then
+        mkdir -p openwrt/package/system
+        cp -rf patch/apk-tools/*.patch openwrt/package/system/
+      else
+        echo "No .patch files found in patch/apk-tools/, skipping..."
+      fi
+    else
+      echo "Directory patch/apk-tools/ does not exist, skipping..."
+    fi
 
-        curl -s https://raw.githubusercontent.com/immortalwrt/immortalwrt > feeds.conf.default
-        sed -i 's#https://git.openwrt.org/feed#https://github.com/openwrt#g' feeds.conf.default
-        cd openwrt
-        find ./staging_dir/ -name '*' -exec touch {} \; >/dev/null 2>&1
-        ./scripts/feeds update -a
-        cd ..
+    # 下载并修改 feeds 配置
+    curl -s https://raw.githubusercontent.com/immortalwrt/immortalwrt/openwrt-21.02/feeds.conf.default > feeds.conf.default
+    sed -i 's#https://git.openwrt.org/feed#https://github.com/openwrt#g' feeds.conf.default
+
+    # 更新 feeds
+    cd openwrt
+    find ./staging_dir/ -name '*' -exec touch {} \; >/dev/null 2>&1
+    ./scripts/feeds update -a
+    cd ..
 
     # 处理 firewall4 补丁
-        if ls patch/firewall4/*.patch 1>/dev/null 2>&1; then
-          cp -rf patch/firewall4/*.patch openwrt/
-        else
-          echo "No .patch files found in patch/firewall4/, skipping..."
-        fi
+    if [ -d patch/firewall4 ]; then
+      if ls patch/firewall4/*.patch 1>/dev/null 2>&1; then
+        cp -rf patch/firewall4/*.patch openwrt/
+      else
+        echo "No .patch files found in patch/firewall4/, skipping..."
+      fi
+    else
+      echo "Directory patch/firewall4/ does not exist, skipping..."
+    fi
 
     # 处理 luci 补丁
-        if ls patch/luci/*.patch 1>/dev/null 2>&1; then
-          mkdir -p openwrt/feeds/luci
-          cp -rf patch/luci/*.patch openwrt/feeds/luci/
-        else
-          echo "No .patch files found in patch/luci/, skipping..."
-        fi
+    if [ -d patch/luci ]; then
+      if ls patch/luci/*.patch 1>/dev/null 2>&1; then
+        mkdir -p openwrt/feeds/luci
+        cp -rf patch/luci/*.patch openwrt/feeds/luci/
+      else
+        echo "No .patch files found in patch/luci/, skipping..."
+      fi
+    else
+      echo "Directory patch/luci/ does not exist, skipping..."
+    fi
 
 
 
